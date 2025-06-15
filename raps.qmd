@@ -1,0 +1,404 @@
+---
+title: "Reproducibility in Actuarial Workflows"
+subtitle: "Or what actuaries can learn from software engineers"
+format: 
+    revealjs:
+        embed-resources: true
+        slide-number: true
+        theme: solarized
+        incremental: true
+execute: 
+  echo: true
+---
+
+## Introduction
+
+- We are writing more code
+- Need to be able to reproduce results from past projects, for review or audit purposes
+- We need tools to:
+  * Write 
+  * Collaborate (not covered today but mentioned)
+  * Review
+  * Reproduce projects
+- Software engineers face the same challenges and solved them _decades_ ago
+
+## Goal of the learning session {.smaller}
+
+- Identify *what* must be managed for reproducibility
+- Learn the following tools to make your work reproducible:
+  1. {renv} for R and conda for Python
+  2. {targets} for R
+  3. Functional programming concepts
+  4. Bonus: Quarto for R _and_ Python
+
+- What we will not learn (but is very useful):
+  1. Git and Github
+  2. Docker
+  3. Documenting, testing and packaging code
+
+## What do we mean by reproducibility? And why should you care?
+
+Getting the *same* results from an analysis when the same data is used
+
+. . .
+
+Why would you want this?
+
+- Auditing purposes
+- Reproducibility is a cornerstone of science/mathematics
+- Peace of mind
+- Future you will thank you
+
+## Examples (1/2)
+
+- Famous Paper: Reinhart and Rogoff
+- Published a paper that showed that when countries are too much in debt (over 60% of GDP according to the authors) then annual growth decreases by two percent.
+- Serious problem: Performed calculations in excel and did not (this actually happened) select every country's real GDP growth to compute average real GDP growth for high debt countries by governments.
+
+## Examples (1/2)
+
+![](images/rr_excel.png){fig-align="center"}
+
+## Examples (1/2)
+
+- This paper was used to justify austerity measures for European countries during the 2009 crisis
+
+## Examples (2/2)
+- Within the department:
+  1. Bancassurance code
+  2. _All_ excel files - one click away from messing up your day
+  3. Risk Integrity Data files
+
+## Levels of reproducibilty (1/2)
+
+Here are the five main things influencing an analysis' reproducibility:
+
+- Version of language used
+- Version of packages used
+- Operating system
+- Hardware (basically your computer)
+- Documentation
+
+## Levels of reproducibility (2/2)
+
+![](images/repro_spectrum.png){fig-align="center"}
+
+Source: Peng, Roger D. 2011. "Reproducible Research in Computational Science." Science 334 (6060): 1226--27
+
+## Reproducibility Iceberg
+
+![](images/iceberg.png){fig-align="center"}
+
+## Risks to mitigate: Language versions (1/2)
+
+R \< 3.6 (`set.seed(1234)`)
+
+```{r, eval=FALSE}
+sample(seq(1, 10), 5)
+```
+
+```{r, echo=FALSE}
+withr::with_seed(
+  seed = 1234,
+  .rng_sample_kind = "Rounding",
+  sample(seq(1, 10), 5)
+)
+```
+
+. . .
+
+R \>= 3.6 (`set.seed(1234)`)
+
+```{r, eval=FALSE}
+sample(seq(1, 10), 5)
+```
+
+```{r, echo=FALSE}
+withr::with_seed(
+  seed = 1234,
+  .rng_sample_kind = "Rejection",
+  sample(seq(1, 10), 5)
+)
+```
+
+There is a real impact on analysis conducted with R \< 3.6!
+
+## Risks to mitigate: Language versions (2/2)
+
+Python \>= 3.6+
+
+```{python, eval=FALSE}
+name = "Alice"
+print(f"Hello, {name}!")
+```
+
+
+```{python, echo=FALSE}
+name = "Alice"
+print(f"Hello, {name}!")
+```
+
+. . .
+
+Python \< 3.6
+
+```{python, eval=FALSE}
+name = "Alice"
+print(f"Hello, {name}!")
+```
+
+```python
+File "example.py", line 2
+    print(f"Hello, {name}!")
+                          ^
+SyntaxError: invalid syntax
+```
+
+Analysis will not run in this case.
+
+## Risk to mitigate: Package Versions (1/2)
+
+`{stringr}` < 1.5.0:
+
+```{r, eval = F}
+stringr::str_subset(c("", "a"), "")
+```
+
+```{r, eval = F}
+[1] "a"
+```
+
+. . .
+
+`{stringr}` >= 1.5.0:
+
+```{r, eval = F}
+stringr::str_subset(c("", "a"), "")
+```
+
+```{r, eval = F}
+Error in `stringr::str_subset()`:
+! `pattern` can't be the empty string (`""`).
+Run `rlang::last_trace()` to see where the error occurred.
+```
+
+(Actually a good change, but if you rely on that old behaviour for your script...)
+
+## Risk to mitigate: Package Versions (2/2)
+
+NumPy \< Prior 2008
+
+```{python, eval = FALSE}
+import numpy as np
+np.array([1]) / 2
+```
+
+```{python, eval = FALSE}
+0
+```
+
+. . .
+
+NumPy >= After 2008
+
+```{python, eval = FALSE}
+import numpy as np
+np.array([1]) / 2
+```
+
+```{python, eval = FALSE}
+0.5
+```
+
+## Risks to mitigate: Operating systems (1/3)
+
+Rarely an issue, but [Neupane, et al. 2019](https://pubs.acs.org/doi/10.1021/acs.orglett.9b03216):
+
+> While preparing a manuscript, to our surprise, attempts by team members to replicate these results produced different calculated NMR chemical shifts despite using the same Gaussian files and the same procedure outlined by Willoughby et al. \[...\] these conclusions were based on chemical shifts that appeared to depend on the computer system on which step 15 of that protocol was performed.
+
+## Risks to mitigate: Operating systems (2/3)
+
+![](images/table2a.png){fig-align="center"}
+
+## Risks to mitigate: Operating systems (3/3)
+
+![](images/table2.png){fig-align="center"}
+
+## The problem
+
+<span style="font-variant:small-caps;text-align:center;">Works on my machine!</span>
+
+. . .
+
+We will all use your computer then.
+
+## Project start
+
+- Our project: Profit by Company
+- Data to analyse: `IRA Report 2023`
+- 2 scripts to analyse the data:
+
+::: {.panel-tabset}
+
+### R
+
+1. One to scrape the excel file [fetch_data.R]
+2. One to analyse the data [analysis.R]
+
+### Python
+
+1. One to scrape the excel file [fetch_data.py]
+2. One to analyse the data [analysis.py]
+
+:::
+
+## Project start: What's wrong with these scripts?
+
+- The first two scripts -> script-based workflow
+- Just a long series of calls
+- No functions meaning:
+  * difficult to re-use!
+  * difficult to test!
+  * difficult to parallelise!
+  * lots of repetitions (plots)
+- Usually we want a report not just a script; in this case a dashboard
+
+## Turning our scripts reproducible
+
+We need to answer these questions
+
+. . .
+
+1. How easy would it be for someone else to rerun the analysis?
+2. How easy would it be to update the project?
+3. How easy would it be to reuse this code for another project?
+4. What guarantee do we have that the output is stable through time?
+
+## The easiest, **cheapest** thing you should do
+
+- Write an audit trail/documentation
+- Generate a list of used packages and programming language:
+  * In R, we can use {renv}
+  * In Python, we can use venv/pipenv/conda/uv/poetry/virtualenv
+
+- You can see how much of an issue this is in Python with all the tools available.
+
+## Recording packages and language version used {.smaller}
+
+Create a virtual environment on a project by project basis: 
+
+::: {.panel-tabset}
+
+### R
+Create a `renv.lock` file in 2 steps:
+
+- Open an R session in the folder containing the scripts
+- Run `renv::init()` and check the folder for `renv.lock`. (`renv::init()` will take some time to run the first time)
+
+### Python
+
+Before you start a project, create a `virtual environment` in 5 steps. We will be using conda:
+
+- Open the Anaconda terminal
+- Create an environment by running: `conda create --name <my-env>`. Replace `<my-env>` with the name of your environment.
+- Run `conda activate <my-env>` to activate the environment. 
+- Install the python version and package versions you want.
+- To obtain the python and package versions for your environment, you can run `conda list -e > requirements.txt`.
+
+:::
+
+## Restoring a library
+
+::: {.panel-tabset}
+
+### R
+
+- `renv.lock` file not just a record
+- Can be used to restore as well!
+- Go to a new folder.
+- Run `renv::restore()` (answer `Y` to active the project when asked)
+- Will take some time to run (so maybe don’t do it now)... and it might not work!
+
+### Python
+
+- `requirements.txt` file not just a record
+- Open Anaconda terminal
+- Run `conda create --name <env> --file requirements.txt`
+- Will take some time to run...might not work!
+
+:::
+
+## Shortcomings
+
+. . .
+
+1. Records, but does not restore the version of R; applies to {renv} only
+2. Installation of old packages can fail (due to missing OS-dependencies)
+
+. . .
+
+but... :
+
+. . .
+
+1. Generating these files is "free"
+2. Provides a blueprint for "dockerizing" our analysis (not discussed today)
+3. Create a project specific library (no interferences)
+
+## Where are we on the reproducibility iceberg?
+
+- Package and language versions are recorded
+- Packages can be restored (not 100% chance of always working, but certainly not 0%)
+- You could stop here, I think this is enough
+- But let's go one step further (for now), let's create a pipeline
+
+## Build automation using `{targets}` - R only
+
+- Anatomy of the `_targets.R` script
+- What's a "target"?
+- Dependencies of the pipeline?
+- How to inspect the pipeline?
+- How to run the pipeline?
+- How to inspect a computed target?
+
+## Only outdated targets get recomputed
+
+- Inspect the pipeline using `targets::tar_visnetwork()`
+- Let's remove a company from the list of companies
+- Inspect the pipeline again
+- Rerun the pipeline! Only what's needed gets recomputed
+
+## Our analysis as a pipeline (1/3)
+
+- [Discussion] What’s the difference between this pipeline and our original scripts?
+- Benefits:
+  1. `_targets.R` provides a clear view of what’s happening (beyond documentation)
+  2. Functions can be easily re-used (and packaged!)
+  3. The pipeline is pure (the results don’t depend on any extra, manual, manipulation!)
+
+## Our analysis as a pipeline (2/3)
+
+  4. The pipeline compiles a document (which is often what we want or need)
+  5. Computations can run in parallel!
+
+## Our analysis as a pipeline (3/3)
+
+- [Discussion] Let’s take stock... what else should we do and what’s missing?
+- Call `renv::init()`
+
+## Further steps you could take
+
+- Using Git and Github to:
+  * Track changes to your code
+  * Automate publishing of results (which I think could prove really useful!)
+- Put commonly used functions into a package, for example:
+  * Earned premium/UPR calculations
+  * 
+- Overkill but use Docker. Further reading: [I'm an Actuary: What is Docker and do I need to use it?](https://modernactuary.co.za/blog/what-is-docker-do-i-need-it) by Caesar Balona
+
+## Conclusion
+
+- At the very least, generate an `renv.lock` or `requirements.txt` file
+- Write good documentation/audit trails for your code
+- Consider using `{targets}`: not only good for reproducibility, but also an amazing tool all around
+- Long-term reproducibility: must use Docker (or some alternative), and maintenance effort is required as well
