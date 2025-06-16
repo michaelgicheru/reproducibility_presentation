@@ -234,7 +234,7 @@ We will all use your computer then.
 
 ## Project start
 
-- Our project: Profit by Company
+- Our project: Insurance Service Result
 - Data to analyse: `IRA Report 2023`
 - 2 scripts to analyse the data:
 
