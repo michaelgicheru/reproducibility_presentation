@@ -161,7 +161,7 @@ ggsave("plots/icea_plot.pdf", icea_plot, width = 20, height = 10, units = "in")
 ggsave("plots/cic_plot.pdf", cic_plot, width = 20, height = 10, units = "in")
 ggsave(
   "plots/jubilee_plot.pdf",
-  cic_plot,
+  jubilee_plot,
   width = 20,
   height = 10,
   units = "in"

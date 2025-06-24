@@ -393,7 +393,7 @@ but... :
   * Automate publishing of results (which I think could prove really useful!)
 - Put commonly used functions into a package, for example:
   * Earned premium/UPR calculations
-  * 
+  * [Discussion]
 - Overkill but use Docker. Further reading: [I'm an Actuary: What is Docker and do I need to use it?](https://modernactuary.co.za/blog/what-is-docker-do-i-need-it) by Caesar Balona
 
 ## Conclusion
